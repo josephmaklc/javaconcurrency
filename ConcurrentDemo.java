@@ -64,7 +64,7 @@ public class ConcurrentDemo {
 			return "Data supplied to completable future";
 		}).thenApply(data -> data.toUpperCase()).thenAccept(
 				result -> System.out.println("Result from completableFuture with apply afterwards: " + result));
-		System.out.println("Main thread continues...");
+		System.out.println("CompletableFuture: Main thread continues...");
 		// the following sleep is so that the program doesn't end before the above ends
 		try {
 			Thread.sleep(3000);
@@ -83,25 +83,59 @@ public class ConcurrentDemo {
 
 		// Chain a callback to process results after all futures are done
 		CompletableFuture<List<String>> allResults = allFutures.thenApply(v -> {
-			return Stream.of(future1, future2, future3).map(CompletableFuture::join) // `join()` is a non-throwing
-																						// version of `get()`
-					.collect(Collectors.toList());
+			 // `join()` is a non-throwing version of `get()`
+			return Stream.of(future1, future2, future3).map(CompletableFuture::join).collect(Collectors.toList());
 		});
 
 		// Block and get the final list of results
 		List<String> results = allResults.join();
-		System.out.println("All futures completed. Results: " + results);
+		System.out.println("MultipleCompletableFutures: All futures completed. Results: " + results);
 	}
 
+	// Virtual Threads
+	   public void virtualThreadDemo() throws InterruptedException {
+	        // Create an ExecutorService that uses virtual threads
+	        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+	            
+	            for (int i = 0; i < 5; i++) {
+	                final int taskId = i;
+	                
+	                // Submit tasks to the executor
+	                executor.submit(() -> {
+	                    System.out.println("Task " + taskId + " running on Virtual Thread: " + Thread.currentThread().threadId());
+	                    
+	                    // Simulate a blocking operation (I/O)
+	                    try {
+	                        Thread.sleep(100);
+	                    } catch (InterruptedException e) {
+	                        Thread.currentThread().interrupt();
+	                    }
+	                    
+	                    System.out.println("Task " + taskId + " finished.");
+	                });
+	            }
+	            
+	        } // The try-with-resources block automatically calls executor.shutdown()
+
+	        // Wait a bit for the tasks to complete before the main thread exits
+	        // Note: The ExecutorService itself is closed by try-with-resources, 
+	        // but we might still need to wait for submitted tasks.
+	        Thread.sleep(500); 
+	        System.out.println("VirtualThreadDemo: Main thread finished executing tasks.");
+	    }
+	   
 	public static void main(String arg[]) {
 		ConcurrentDemo me = new ConcurrentDemo();
 		try {
+			System.out.println("Begin");
 			// you can comment all except the one you want to test
 			me.threadExample();
 			me.executorThreadDemo();
 			me.executorFuture();
 			me.completableFutureDemo();
 			me.waitForMultipleCompletableFutures();
+			me.virtualThreadDemo();
+			System.out.println("All done");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
